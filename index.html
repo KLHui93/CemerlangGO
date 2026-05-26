@@ -1,0 +1,1784 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CemerlangGo — OPR Generator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --sb: #0f1117;
+  --sb2: #161920;
+  --sbr: #20232e;
+  --acc: #5046e4;
+  --acc2: #818cf8;
+  --mu: #6b6b82;
+  --ibg: #191c27;
+  --ibr: #272b3a;
+  --tx: #e8e8f2;
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: #0a0c11;
+  display: flex; height: 100vh; overflow: hidden;
+  color: var(--tx);
+}
+
+/* ── SIDEBAR ── */
+#sb {
+  width: 340px; min-width: 300px;
+  background: var(--sb);
+  border-right: 1px solid var(--sbr);
+  display: flex; flex-direction: column;
+  overflow: hidden; position: relative;
+}
+
+#sb-head {
+  padding: 13px 15px;
+  border-bottom: 1px solid var(--sbr);
+  flex-shrink: 0;
+  display: flex; align-items: center; gap: 10px;
+}
+.sb-ico {
+  width: 34px; height: 34px;
+  background: linear-gradient(135deg, var(--acc), var(--acc2));
+  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 900; color: #fff; letter-spacing: -.5px;
+  flex-shrink: 0;
+}
+.sb-name { font-size: 14px; font-weight: 800; }
+.sb-desc { font-size: 9px; color: var(--mu); margin-top: 1px; line-height: 1.3; }
+#btn-about { flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid var(--sbr); background: none; color: var(--mu); font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: border-color .15s, color .15s; }
+#btn-about:hover { border-color: var(--acc); color: var(--acc2); }
+/* Toggle button — inside sidebar header */
+#btn-toggle-sb {
+  margin-left: auto; flex-shrink: 0;
+  width: 26px; height: 26px; border-radius: 50%;
+  border: 1.5px solid var(--sbr); background: none;
+  color: var(--mu); font-size: 14px; font-weight: 400;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: border-color .15s, color .15s, background .15s;
+  line-height: 1;
+}
+#btn-toggle-sb:hover { border-color: var(--acc); color: var(--acc2); }
+/* Floating tab — reopen sidebar when hidden */
+#btn-open-sb {
+  position: fixed; left: 0; top: 50%; transform: translateY(-50%);
+  background: var(--acc); color: #fff;
+  border: none; border-radius: 0 8px 8px 0;
+  width: 20px; padding: 18px 4px;
+  cursor: pointer; font-size: 13px; z-index: 300;
+  display: none;
+  box-shadow: 2px 2px 14px rgba(0,0,0,.45);
+  transition: opacity .15s;
+  writing-mode: vertical-lr; letter-spacing: 2px;
+}
+#btn-open-sb:hover { opacity: .85; }
+body.sb-hidden #btn-open-sb { display: flex; align-items: center; justify-content: center; }
+/* About modal */
+#about-modal { display: none; position: fixed; inset: 0; z-index: 9000; background: rgba(0,0,0,.55); align-items: center; justify-content: center; }
+#about-modal.open { display: flex; }
+#about-box { background: var(--sb); border: 1px solid var(--sbr); border-radius: 14px; width: 340px; max-width: 94vw; max-height: 88vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.4); }
+#about-hdr { background: linear-gradient(130deg,#4338ca,#6366f1 60%,#818cf8); border-radius: 13px 13px 0 0; padding: 22px 22px 18px; }
+#about-logo { font-size: 20px; font-weight: 900; color: #fff; letter-spacing: 2px; }
+#about-tagline { font-size: 11px; color: rgba(255,255,255,.75); margin-top: 3px; letter-spacing: .3px; }
+#about-body { padding: 18px 20px 22px; }
+.ab-section { margin-bottom: 16px; }
+.ab-section:last-child { margin-bottom: 0; }
+.ab-title { font-size: 9px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: var(--acc2); margin-bottom: 8px; }
+.ab-item { display: flex; gap: 9px; align-items: flex-start; margin-bottom: 6px; font-size: 11px; color: var(--tx); line-height: 1.5; }
+.ab-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--acc); flex-shrink: 0; margin-top: 4px; }
+#about-close { width: 100%; padding: 10px; border: none; border-radius: 8px; background: var(--acc); color: #fff; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; margin-top: 4px; transition: opacity .15s; }
+#about-close:hover { opacity: .85; }
+
+#fs {
+  flex: 1; overflow-y: auto;
+  padding: 10px 13px 90px;
+  scrollbar-width: thin; scrollbar-color: var(--sbr) transparent;
+}
+
+/* section row with toggle */
+.sr {
+  display: flex; align-items: center; gap: 7px;
+  margin: 14px 0 7px;
+}
+.sr:first-child { margin-top: 2px; }
+.sr-t { font-size: 8px; font-weight: 700; letter-spacing: 2px; color: var(--mu); text-transform: uppercase; white-space: nowrap; }
+.sr-l { height: 1px; background: var(--sbr); flex: 1; }
+
+/* toggle */
+.tog { display: flex; align-items: center; cursor: pointer; }
+.tog input { display: none; }
+.tog-t {
+  width: 30px; height: 17px; background: #2a2d3e; border-radius: 9px;
+  position: relative; transition: background .18s;
+}
+.tog input:checked + .tog-t { background: var(--acc); }
+.tog-t::after {
+  content: ''; position: absolute; top: 2.5px; left: 2.5px;
+  width: 12px; height: 12px; background: #fff; border-radius: 50%;
+  transition: left .18s;
+}
+.tog input:checked + .tog-t::after { left: 15.5px; }
+
+.fl { display: block; font-size: 8px; font-weight: 700; letter-spacing: 1.5px; color: var(--mu); text-transform: uppercase; margin: 8px 0 3px; }
+
+input[type=text], input[type=date], input[type=number], select, textarea {
+  width: 100%;
+  background: var(--ibg); border: 1px solid var(--ibr);
+  border-radius: 7px; color: var(--tx);
+  font-size: 12px; padding: 7px 10px;
+  outline: none; transition: border-color .18s; font-family: inherit;
+}
+/* Auto uppercase for text inputs; content textareas use sentence case */
+input[type=text] { text-transform: uppercase; }
+textarea:not(#f-obj):not(#f-ring):not(#f-imp) { text-transform: uppercase; }
+input:focus, select:focus, textarea:focus { border-color: var(--acc); }
+input[type=date]::-webkit-calendar-picker-indicator { filter: invert(.5); }
+select option { background: #191c27; }
+textarea { resize: vertical; min-height: 58px; line-height: 1.5; }
+.r2 { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+
+
+/* img slots */
+.ic-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+.ic-bar .fl { margin: 0; flex: 1; }
+.ic-bar select { width: 65px; padding: 5px 7px; }
+.ig { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.is {
+  aspect-ratio: 4/3; min-height: 90px; background: var(--ibg); border: 1.5px dashed var(--ibr);
+  border-radius: 7px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  cursor: pointer; position: relative; overflow: hidden; transition: border-color .18s;
+}
+.is:hover { border-color: var(--acc); }
+.is input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; padding: 0; }
+.is .pl { font-size: 20px; color: var(--mu); pointer-events: none; }
+.is .sl { font-size: 8px; letter-spacing: 1px; color: var(--mu); margin-top: 3px; pointer-events: none; }
+.is img.th { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.is .rm { position: absolute; top: 3px; right: 3px; background: rgba(0,0,0,.75); border: none; border-radius: 50%; color: #fff; width: 18px; height: 18px; font-size: 10px; cursor: pointer; display: none; align-items: center; justify-content: center; z-index: 2; }
+.is:hover .rm { display: flex; }
+/* ── Crop Modal ── */
+#crop-modal { display: none; position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,.85); flex-direction: column; align-items: center; justify-content: center; }
+#crop-modal.open { display: flex; }
+#crop-wrap { position: relative; max-width: 90vw; max-height: 75vh; overflow: hidden; cursor: crosshair; user-select: none; touch-action: none; }
+#crop-img { display: block; max-width: 90vw; max-height: 75vh; pointer-events: none; }
+#crop-region {
+  position: absolute; border: 2px solid #fff; cursor: move;
+  box-shadow: 0 0 0 9999px rgba(0,0,0,.55);
+  touch-action: none;
+}
+#crop-region::before, #crop-region::after,
+.cr-b::before, .cr-b::after {
+  content: ''; position: absolute; background: rgba(255,255,255,.5);
+}
+#crop-region::before { top: 33.33%; left: 0; right: 0; height: 1px; }
+#crop-region::after  { top: 66.66%; left: 0; right: 0; height: 1px; }
+.cr-b::before { left: 33.33%; top: 0; bottom: 0; width: 1px; }
+.cr-b::after  { left: 66.66%; top: 0; bottom: 0; width: 1px; }
+#crop-btns { margin-top: 14px; display: flex; gap: 10px; }
+#crop-btns button { padding: 9px 26px; border-radius: 8px; border: none; font-size: 14px; font-weight: 700; cursor: pointer; }
+#btn-crop-ok  { background: var(--acc); color: #fff; }
+#btn-crop-ok:hover { background: var(--acc2); }
+#btn-crop-cancel { background: rgba(255,255,255,.15); color: #fff; }
+#btn-crop-cancel:hover { background: rgba(255,255,255,.28); }
+#crop-hint { color: rgba(255,255,255,.7); font-size: 12px; margin-top: 8px; letter-spacing: .5px; }
+
+/* API key section */
+
+/* sidebar footer */
+#sb-ft {
+  position: absolute; bottom: 0; left: 0; width: 100%;
+  padding: 10px 13px; background: var(--sb);
+  border-top: 1px solid var(--sbr);
+}
+#btn-exp {
+  width: 100%; background: var(--acc); color: #fff;
+  border: none; border-radius: 8px; padding: 11px;
+  font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+  cursor: pointer; text-transform: uppercase;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  transition: opacity .18s;
+}
+#btn-exp:hover { opacity: .85; }
+#btn-exp:disabled { opacity: .45; cursor: not-allowed; }
+
+/* ── PREVIEW ── */
+#pv {
+  flex: 1; background: #12141b; overflow-y: auto;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 22px 20px 30px; gap: 12px;
+}
+#pv-bar {
+  width: 100%; max-width: 794px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+#pv-bar .lbl { font-size: 8.5px; letter-spacing: 2px; color: var(--mu); text-transform: uppercase; }
+.zc { display: flex; gap: 5px; align-items: center; }
+.zc button { background: var(--ibg); border: 1px solid var(--sbr); color: var(--tx); border-radius: 5px; width: 24px; height: 24px; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; }
+.zc .zl { font-size: 10px; color: var(--mu); min-width: 34px; text-align: center; }
+#pvw { transform-origin: top center; transition: transform .2s; pointer-events: none; }
+#kol-pvw { transform-origin: top center; pointer-events: none; display: none; }
+
+/* ── MODE TABS ── */
+#mode-tabs { display: flex; border-bottom: 1px solid var(--sbr); flex-shrink: 0; }
+.mtab { flex: 1; padding: 10px 6px; background: none; border: none; border-bottom: 2px solid transparent; color: var(--mu); font-size: 9.5px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; transition: color .15s, border-color .15s; }
+.mtab.active { color: var(--acc2); border-bottom-color: var(--acc); }
+.mtab:hover:not(.active) { color: var(--tx); }
+
+/* ── KOLAJ SIDEBAR ── */
+#kol-fs { flex: 1; overflow-y: auto; padding: 10px 13px 90px; display: none; scrollbar-width: thin; scrollbar-color: var(--sbr) transparent; }
+#kol-drop { border: 2px dashed var(--ibr); border-radius: 8px; padding: 22px 10px; text-align: center; color: var(--mu); font-size: 10px; line-height: 1.6; cursor: pointer; transition: border-color .15s, color .15s; margin: 4px 0 8px; }
+#kol-drop:hover { border-color: var(--acc); color: var(--tx); }
+#kol-drop svg { display: block; margin: 0 auto 6px; opacity: .5; }
+#kol-thumbs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 4px; }
+.kol-th { position: relative; aspect-ratio: 1; border-radius: 6px; overflow: hidden; background: var(--ibg); cursor: grab; transition: opacity .15s, transform .15s; touch-action: none; }
+.kol-th img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
+.kol-th button { position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,.75); border: none; color: #fff; border-radius: 50%; width: 17px; height: 17px; font-size: 9px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.kol-th-num { position: absolute; bottom: 3px; left: 4px; background: rgba(0,0,0,.65); color: #fff; font-size: 9px; font-weight: 700; border-radius: 3px; padding: 1px 5px; pointer-events: none; letter-spacing: .5px; }
+.kol-th.kol-dragging { opacity: 0.35; transform: scale(0.93); cursor: grabbing; }
+.kol-th.kol-over { outline: 2px solid var(--acc); outline-offset: 2px; }
+#btn-kol-exp { width: 100%; background: var(--acc); color: #fff; border: none; border-radius: 8px; padding: 11px; font-size: 11px; font-weight: 700; letter-spacing: 1.5px; cursor: pointer; text-transform: uppercase; display: flex; align-items: center; justify-content: center; gap: 6px; transition: opacity .18s; }
+#btn-kol-exp:hover { opacity: .85; }
+#btn-kol-exp:disabled { opacity: .45; cursor: not-allowed; }
+#kol-sb-ft { position: absolute; bottom: 0; left: 0; width: 100%; padding: 10px 13px; background: var(--sb); border-top: 1px solid var(--sbr); display: none; }
+
+/* ── KOLAJ A4 DOC ── */
+#kol-doc {
+  width: 794px; min-height: 1122px; max-height: 1122px;
+  background: #fff; color: #1e1b4b;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  box-shadow: 0 12px 50px rgba(0,0,0,.55);
+  overflow: hidden; display: flex; flex-direction: column;
+}
+/* image grid fills remaining body space */
+.kol-grid { flex: 1; display: flex; flex-direction: column; gap: 6px; min-height: 0; }
+.kol-row { flex: 1; display: flex; gap: 6px; min-height: 0; }
+.kol-cell { flex: 1; overflow: hidden; border-radius: 7px; background: #eef2ff; min-width: 0; }
+.kol-cell img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.kol-empty { flex: 1; display: flex; align-items: center; justify-content: center; color: #bbb; font-size: 14px; flex-direction: column; gap: 10px; }
+.kol-ph-icon { font-size: 40px; opacity: .3; }
+#btn-kol-salin { width: 100%; margin-bottom: 8px; padding: 7px 10px; background: rgba(99,102,241,.18); border: 1px solid rgba(99,102,241,.4); border-radius: 7px; color: var(--acc2); font-size: 10px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; cursor: pointer; transition: background .15s; }
+#btn-kol-salin:hover { background: rgba(99,102,241,.3); }
+/* Size picker for kolaj preview double-click */
+#kol-doc { pointer-events: auto; }
+.kol-cell { position: relative; }
+.kol-rh {
+  position: absolute; right: 0; top: 0; bottom: 0; width: 18px;
+  cursor: ew-resize; display: flex; align-items: center; justify-content: center;
+  z-index: 10; opacity: 0; transition: opacity .15s;
+  background: linear-gradient(to left, rgba(67,56,202,.55), transparent);
+}
+.kol-rh::before {
+  content: ''; display: block; width: 3px; height: 28px;
+  border-radius: 2px; background: rgba(255,255,255,.9);
+  box-shadow: 0 0 6px rgba(0,0,0,.4);
+}
+.kol-cell:hover .kol-rh { opacity: 1; }
+.kol-cell.kol-resizing .kol-rh { opacity: 1; }
+/* Row height resize handle */
+.kol-row { position: relative; }
+.kol-row-bh {
+  position: absolute; left: 0; right: 0; bottom: -4px; height: 14px;
+  cursor: ns-resize; z-index: 20; display: flex; align-items: center; justify-content: center;
+}
+.kol-row-bh::before {
+  content: ''; display: block; width: 40px; height: 4px; border-radius: 2px;
+  background: rgba(255,255,255,.9); box-shadow: 0 0 6px rgba(0,0,0,.4);
+  opacity: 0; transition: opacity .15s;
+}
+.kol-row:hover .kol-row-bh::before,
+.kol-row.kol-row-resizing .kol-row-bh::before { opacity: 1; }
+/* Preview drag-to-reorder handle */
+.kol-dh {
+  position: absolute; left: 0; top: 0; width: 22px; height: 22px;
+  cursor: grab; z-index: 12; opacity: 0; transition: opacity .15s;
+  background: linear-gradient(to right, rgba(67,56,202,.55), transparent);
+  display: flex; align-items: center; justify-content: center;
+}
+.kol-dh::before {
+  content: ''; display: block; width: 3px; height: 14px;
+  border-radius: 2px; background: rgba(255,255,255,.9);
+  box-shadow: 5px 0 0 rgba(255,255,255,.9);
+}
+.kol-cell:hover .kol-dh { opacity: 1; }
+.kol-cell.kol-pv-dragging { opacity: 0.35; cursor: grabbing; }
+.kol-cell.kol-pv-over { outline: 2px dashed #6366f1; outline-offset: -2px; }
+/* Pan mode (double-click image) */
+.kol-cell.kol-pan-mode::after {
+  content: 'SERET UNTUK PAN'; position: absolute; inset: 0;
+  border: 2.5px solid #4338ca; border-radius: 6px;
+  display: flex; align-items: flex-start; justify-content: flex-start;
+  padding: 5px 7px; font-size: 8px; font-weight: 800; letter-spacing: 1px;
+  color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.8);
+  background: linear-gradient(to bottom, rgba(67,56,202,.35), transparent 40%);
+  pointer-events: none; z-index: 15;
+}
+.kol-cell.kol-pan-mode img { cursor: grab; }
+.kol-cell.kol-pan-mode .kol-rh { pointer-events: none; opacity: 0; }
+.kol-cell.kol-panning img { cursor: grabbing; }
+
+/* ══════════════════════════════════════
+   A4 DOCUMENT
+══════════════════════════════════════ */
+#doc {
+  width: 794px;
+  min-height: 1122px; max-height: 1122px;
+  background: #fff; color: #1e1b4b;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  box-shadow: 0 12px 50px rgba(0,0,0,.55);
+  overflow: hidden;
+  display: flex; flex-direction: column;
+  /* 15mm equivalent margins inside the doc */
+  padding: 0;
+}
+
+/* Header card (inside margins) */
+.dh {
+  margin: 44px 48px 0;
+  background: linear-gradient(130deg, #4338ca 0%, #6366f1 55%, #818cf8 100%);
+  border-radius: 12px;
+  padding: 18px 24px 16px;
+  flex-shrink: 0;
+}
+.dh-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; }
+.dh-brand { font-size: 22px; font-weight: 900; letter-spacing: 3px; color: rgba(255,255,255,.95); }
+.dh-sub { font-size: 18px; color: rgba(255,255,255,.7); letter-spacing: .3px; margin-top: 3px; }
+.dh-badge {
+  background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.3);
+  color: #fff; font-size: 18px; font-weight: 700; letter-spacing: 1.5px;
+  padding: 5px 12px; border-radius: 20px; text-transform: uppercase;
+  white-space: nowrap;
+}
+.dh-title { font-size: 24px; font-weight: 800; color: #fff; font-style: italic; line-height: 1.25; min-height: 30px; }
+.dh-title.ph { color: rgba(255,255,255,.38); font-weight: 400; }
+
+/* Body — all content inside margins */
+.db {
+  flex: 1; margin: 0 48px;
+  padding: 13px 0 13px;
+  display: flex; flex-direction: column; gap: 9px;
+  overflow: hidden;
+}
+
+/* Info chips */
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 8px; padding: 6px 12px; }
+.chip-l { font-size: 13px; font-weight: 800; letter-spacing: 1px; color: #4338ca; text-transform: uppercase; margin-bottom: 2px; }
+.chip-v { font-size: 18px; font-weight: 700; color: #1e1b4b; }
+.chip-v.ph { color: #aaa; font-weight: 400; }
+
+/* Anjuran bar */
+.anj {
+  background: #f5f3ff; border-left: 3.5px solid #6366f1;
+  border-radius: 0 8px 8px 0; padding: 7px 14px;
+  display: flex; align-items: center; gap: 10px;
+}
+.anj-l { font-size: 16px; font-weight: 800; letter-spacing: 1px; color: #4338ca; text-transform: uppercase; white-space: nowrap; }
+.anj-v { font-size: 18px; font-weight: 600; color: #1e1b4b; }
+.anj-v.ph { color: #bbb; font-weight: 400; }
+
+/* Content sections — all full width, stacked 01→02→03 */
+.csec {}
+.ch { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+.cnum { font-size: 34px; font-weight: 900; color: #e0e7ff; line-height: 1; font-style: italic; flex-shrink: 0; }
+.clbl { font-size: 18px; font-weight: 800; letter-spacing: 1px; color: #4338ca; text-transform: uppercase; }
+.cbody {
+  font-size: 18px;
+  line-height: 1.5;
+  color: #2d2a5e;
+  background: #f5f3ff;
+  border-left: 3px solid #6366f1;
+  border-radius: 0 8px 8px 0;
+  padding: 9px 13px;
+  white-space: pre-wrap; word-break: break-word;
+  min-height: 50px;
+}
+.cbody.ph { color: #c5c1e8; font-style: italic; border-left-color: #c7d2fe; background: #faf9ff; }
+
+/* Photos */
+.psec {}
+.phd { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.phd-l { font-size: 18px; font-weight: 800; letter-spacing: 1px; color: #4338ca; text-transform: uppercase; }
+.phd-ln { flex: 1; height: 1px; background: #e0e7ff; }
+
+/* Photo grids — lebar penuh, tinggi ikut nisbah asal gambar */
+.pgrid { display: grid; gap: 7px; }
+
+.pgrid.c1 { grid-template-columns: 1fr; }
+.pgrid.c2 { grid-template-columns: 1fr 1fr; }
+.pgrid.c3 { grid-template-columns: 1fr 1fr; }
+.pgrid.c3 .ps:nth-child(3) { grid-column: 1 / 3; }
+.pgrid.c4 { grid-template-columns: 1fr 1fr; }
+
+.ps {
+  background: #eef2ff; border: 1.5px dashed #c7d2fe;
+  border-radius: 7px; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  min-height: 60px; /* for placeholder visibility */
+}
+/* Lebar 100%, tinggi auto — kekal nisbah asal, tiada crop */
+.ps img { width: 100%; height: auto; display: block; }
+.ps .ph-t { font-size: 10px; color: #c7d2fe; letter-spacing: 1px; }
+
+/* Fixed small gap before sig — NOT flex:1 so sig stays within safe print margin */
+.dsp { height: 14px; flex-shrink: 0; }
+
+/* Signature — single block only */
+.sig-sec {
+  border-top: 1.5px solid #e0e7ff; padding-top: 10px;
+  flex-shrink: 0;
+}
+.sig-role { font-size: 16px; font-weight: 800; letter-spacing: 1.5px; color: #4338ca; text-transform: uppercase; margin-bottom: 22px; }
+.sig-line { border-bottom: 1.5px solid #1e1b4b; margin-bottom: 5px; width: 240px; }
+.sig-name { font-size: 18px; font-weight: 700; color: #1e1b4b; min-height: 22px; }
+.sig-name.ph { color: #bbb; font-weight: 400; font-size: 17px; }
+.sig-pos { font-size: 16px; color: #666; min-height: 18px; }
+.sig-pos.ph { color: #ccc; font-style: italic; }
+.sig-date { font-size: 16px; color: #555; margin-top: 2px; }
+
+/* Footer */
+.dft {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 7px 48px 11px;
+  border-top: 1px solid #f0eeff;
+  flex-shrink: 0;
+}
+.dft-b { font-size: 12px; letter-spacing: 1.5px; color: #bbb; text-transform: uppercase; }
+.dft-b span { color: #6366f1; font-weight: 800; }
+.dft-p { font-size: 10px; color: #bbb; }
+
+.dn { display: none !important; }
+
+/* ── MOBILE / TABLET — sidebar as overlay drawer ── */
+#sb-backdrop {
+  display: none; position: fixed; inset: 0;
+  z-index: 499; background: rgba(0,0,0,.45);
+}
+
+@media (max-width: 768px) {
+  #sb {
+    position: fixed; inset: 0 auto 0 0;
+    width: min(340px, 92vw) !important; min-width: 0 !important;
+    z-index: 500;
+    transform: translateX(0);
+    transition: transform 0.28s cubic-bezier(.4,0,.2,1);
+    box-shadow: 4px 0 30px rgba(0,0,0,.6);
+  }
+  body.sb-hidden #sb { transform: translateX(-100%); }
+  body:not(.sb-hidden) #sb-backdrop { display: block; }
+  #pv { width: 100%; overflow-x: hidden; align-items: center; }
+  #pv-bar { padding: 8px 10px; }
+  #pvw, #kol-pvw { transform-origin: top center; }
+}
+
+/* ── DESKTOP — sidebar collapses with width transition ── */
+@media (min-width: 769px) {
+  #sb { transition: width 0.25s, min-width 0.25s, border-right-width 0.25s; overflow: hidden; }
+  body.sb-hidden #sb { width: 0 !important; min-width: 0 !important; border-right-width: 0 !important; }
+}
+
+@media print {
+  body { background: white; height: auto; overflow: visible; }
+  #sb, #pv-bar { display: none !important; }
+  #pv { padding: 0; background: white; }
+  #pvw, #kol-pvw { transform: none !important; }
+  #doc, #kol-doc { box-shadow: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div id="sb">
+  <div id="sb-head">
+    <div class="sb-ico">CG</div>
+    <div>
+      <div class="sb-name">CemerlangGo</div>
+      <div class="sb-desc">Dokumentasi Guru Kini Lebih Sistematik</div>
+    </div>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:6px;flex-shrink:0;">
+      <button id="btn-about" onclick="document.getElementById('about-modal').classList.add('open')" title="Tentang CemerlangGo">?</button>
+      <button id="btn-toggle-sb" onclick="toggleSidebar()" title="Sembunyikan Panel">✕</button>
+    </div>
+  </div>
+
+  <div id="mode-tabs">
+    <button class="mtab active" id="tab-opr" onclick="switchMode('opr')">📄 OPR</button>
+    <button class="mtab" id="tab-kolaj" onclick="switchMode('kolaj')">🖼 Kolaj Gambar</button>
+  </div>
+
+  <div id="fs">
+
+    <div class="sr"><span class="sr-t">Butiran Program</span><div class="sr-l"></div></div>
+
+    <label class="fl">Nama Program</label>
+    <input type="text" id="f-nama" placeholder="Masukkan nama program..." oninput="upd()">
+
+    <div class="r2" style="margin-top:7px">
+      <div><label class="fl">Tarikh Mula</label><input type="date" id="f-mula" oninput="upd()"></div>
+      <div><label class="fl">Tarikh Tamat</label><input type="date" id="f-tamat" oninput="upd()"></div>
+    </div>
+
+    <label class="fl">Tempat / Lokasi</label>
+    <input type="text" id="f-lok" placeholder="Contoh: Bilik Mesyuarat, SMK X" oninput="upd()">
+
+    <div class="r2" style="margin-top:7px">
+      <div>
+        <label class="fl">Peringkat</label>
+        <select id="f-per" onchange="upd()">
+          <option>INSTITUSI</option><option>DAERAH</option>
+          <option>NEGERI</option><option>KEBANGSAAN</option><option>ANTARABANGSA</option>
+        </select>
+      </div>
+      <div>
+        <div style="display:flex;align-items:center;gap:6px;margin:8px 0 3px">
+          <span class="fl" style="margin:0;flex:1">Bil. Peserta</span>
+          <label class="tog"><input type="checkbox" id="tog-pes" checked onchange="togPes()"><div class="tog-t"></div></label>
+        </div>
+        <div id="pes-inp"><input type="number" id="f-pes" placeholder="0" min="0" oninput="upd()"></div>
+      </div>
+    </div>
+
+    <label class="fl">Peranan</label>
+    <input type="text" id="f-prn" placeholder="Penceramah / Urusetia / Peserta" oninput="upd()">
+
+    <label class="fl">Anjuran</label>
+    <input type="text" id="f-anj" placeholder="Contoh: Jabatan Pendidikan Negeri" oninput="upd()">
+
+    <!-- Objektif -->
+    <div class="sr">
+      <span class="sr-t">Objektif</span><div class="sr-l"></div>
+      <label class="tog"><input type="checkbox" id="tog-obj" checked onchange="refreshCols()"><div class="tog-t"></div></label>
+    </div>
+    <div id="obj-f">
+      <textarea id="f-obj" placeholder="1. Meningkatkan kemahiran [Topik] murid.&#10;2. Memperkenalkan teknik [Nama Teknik]." rows="3" oninput="upd()"></textarea>
+    </div>
+
+    <!-- Ringkasan -->
+    <div class="sr">
+      <span class="sr-t">Ringkasan Pelaksanaan</span><div class="sr-l"></div>
+      <label class="tog"><input type="checkbox" id="tog-ring" checked onchange="refreshCols()"><div class="tog-t"></div></label>
+    </div>
+    <div id="ring-f">
+      <textarea id="f-ring" placeholder="Program dijalankan melalui 3 fasa: Demo, Latihan Berkumpulan, dan Penilaian." rows="3" oninput="upd()"></textarea>
+    </div>
+
+    <!-- Impak -->
+    <div class="sr">
+      <span class="sr-t">Impak / Refleksi</span><div class="sr-l"></div>
+      <label class="tog"><input type="checkbox" id="tog-imp" checked onchange="refreshCols()"><div class="tog-t"></div></label>
+    </div>
+    <div id="imp-f">
+      <textarea id="f-imp" placeholder="Kehadiran 100%. Murid mampu kuasai kemahiran X dalam masa 30 minit.&#10;&#10;Refleksi: Program berjaya. Cadangan: Tambah masa untuk sesi soal jawab." rows="3" oninput="upd()"></textarea>
+    </div>
+
+    <!-- Gambar -->
+    <div class="sr">
+      <span class="sr-t">Gambar Aktiviti</span><div class="sr-l"></div>
+      <label class="tog"><input type="checkbox" id="tog-gam" checked onchange="togSec('gam')"><div class="tog-t"></div></label>
+    </div>
+    <div id="gam-f">
+      <div class="ic-bar">
+        <label class="fl">Bilangan Gambar</label>
+        <select id="f-imgn" onchange="updateSlots()"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option></select>
+        <button onclick="toggleUploadGrid()" id="btn-show-grid" style="background:var(--acc);color:#fff;border:none;border-radius:5px;padding:4px 9px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">− SEMBUNYIKAN</button>
+      </div>
+      <div class="ig" id="ig">
+        <div class="is" id="is0"><input type="file" accept="image/*,.heic,.heif" onchange="loadI(event,0)"><div class="pl">+</div><div class="sl">GAMBAR 1</div><button class="rm" onclick="rmI(event,0)">✕</button></div>
+        <div class="is" id="is1"><input type="file" accept="image/*,.heic,.heif" onchange="loadI(event,1)"><div class="pl">+</div><div class="sl">GAMBAR 2</div><button class="rm" onclick="rmI(event,1)">✕</button></div>
+      </div>
+    </div>
+
+    <!-- Penyedia -->
+    <div class="sr">
+      <span class="sr-t">Penyedia Laporan</span><div class="sr-l"></div>
+      <label class="tog"><input type="checkbox" id="tog-sig" checked onchange="togSec('sig')"><div class="tog-t"></div></label>
+    </div>
+    <div id="sig-f">
+      <label class="fl">Nama Penyedia</label>
+      <input type="text" id="f-pn" placeholder="Nama penuh" oninput="upd()">
+      <label class="fl">Jawatan</label>
+      <input type="text" id="f-pj" placeholder="Jawatan" oninput="upd()">
+      <label class="fl">Nama Institusi</label>
+      <input type="text" id="f-inst" placeholder="Nama institusi / sekolah" oninput="upd()">
+    </div>
+
+
+  </div>
+
+  <!-- KOLAJ SIDEBAR -->
+  <div id="kol-fs">
+    <div class="sr"><span class="sr-t">Butiran Program</span><div class="sr-l"></div></div>
+    <button id="btn-kol-salin" onclick="kolSalinOPR()">⇩ Salin dari OPR</button>
+
+    <label class="fl">Nama Program</label>
+    <input type="text" id="kol-title" placeholder="KOLAJ GAMBAR AKTIVITI" oninput="buildCollage()">
+
+    <div class="r2" style="margin-top:7px">
+      <div><label class="fl">Tarikh Mula</label><input type="date" id="kol-mula" oninput="buildCollage()"></div>
+      <div><label class="fl">Tarikh Tamat</label><input type="date" id="kol-tamat" oninput="buildCollage()"></div>
+    </div>
+
+    <label class="fl">Tempat / Lokasi</label>
+    <input type="text" id="kol-lok" placeholder="Contoh: Bilik Mesyuarat, SMK X" oninput="buildCollage()">
+
+    <div class="r2" style="margin-top:7px">
+      <div>
+        <label class="fl">Peringkat</label>
+        <select id="kol-per" onchange="buildCollage()">
+          <option>INSTITUSI</option><option>DAERAH</option>
+          <option>NEGERI</option><option>KEBANGSAAN</option><option>ANTARABANGSA</option>
+        </select>
+      </div>
+      <div>
+        <div style="display:flex;align-items:center;gap:6px;margin:8px 0 3px">
+          <span class="fl" style="margin:0;flex:1">Bil. Peserta</span>
+          <label class="tog"><input type="checkbox" id="kol-tog-pes" checked onchange="buildCollage()"><div class="tog-t"></div></label>
+        </div>
+        <div id="kol-pes-inp"><input type="number" id="kol-pes" placeholder="0" min="0" oninput="buildCollage()"></div>
+      </div>
+    </div>
+
+    <label class="fl">Peranan</label>
+    <input type="text" id="kol-prn" placeholder="Penceramah / Peserta" oninput="buildCollage()">
+
+    <label class="fl">Anjuran</label>
+    <input type="text" id="kol-anj" placeholder="Contoh: Jabatan Pendidikan Negeri" oninput="buildCollage()">
+
+    <div class="sr" style="margin-top:12px"><span class="sr-t">Gambar (maks 12)</span><div class="sr-l"></div></div>
+    <div id="kol-drop" onclick="document.getElementById('kol-input').click()">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      Klik untuk muat naik gambar<br><span style="font-size:9px;opacity:.6">Boleh pilih beberapa gambar sekaligus</span>
+    </div>
+    <input type="file" id="kol-input" accept="image/*,.heic,.heif" multiple style="display:none" onchange="handleKolajFiles(event)">
+    <div id="kol-thumbs"></div>
+  </div>
+
+  <div id="kol-sb-ft">
+    <button id="btn-kol-exp" onclick="expCollagePDF()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Simpan Kolaj PDF
+    </button>
+    <div style="text-align:center;margin-top:7px;font-size:9px;color:var(--mu);letter-spacing:.3px;">© Hui Kar Loong</div>
+  </div>
+
+  <div id="sb-ft">
+    <button id="btn-exp" onclick="expPDF()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Simpan PDF (A4)
+    </button>
+    <div style="text-align:center;margin-top:7px;font-size:9px;color:var(--mu);letter-spacing:.3px;">© Hui Kar Loong</div>
+  </div>
+</div>
+
+<!-- Sidebar backdrop (mobile only) -->
+<div id="sb-backdrop" onclick="toggleSidebar()"></div>
+<!-- Floating reopen tab (visible when sidebar hidden) -->
+<button id="btn-open-sb" onclick="toggleSidebar()" title="Tunjukkan Panel">☰</button>
+
+<!-- PREVIEW -->
+<div id="pv">
+  <div id="pv-bar">
+    <span class="lbl">Pratonton A4</span>
+    <div class="zc">
+      <button onclick="zoom(-.1)">−</button>
+      <span class="zl" id="zlbl">70%</span>
+      <button onclick="zoom(.1)">+</button>
+    </div>
+  </div>
+
+  <div id="kol-pvw" style="transform:scale(0.7)">
+    <div id="kol-doc">
+
+      <!-- Header card — mirrors OPR -->
+      <div class="dh">
+        <div class="dh-top">
+          <div>
+            <div class="dh-brand">CemerlangGo</div>
+            <div class="dh-sub">Dokumentasi Guru Kini Lebih Sistematik.</div>
+          </div>
+          <div class="dh-badge">Kolaj Gambar</div>
+        </div>
+        <div class="dh-title ph" id="kol-d-title">Sila Masukkan Nama Program</div>
+      </div>
+
+      <!-- Body — same margins as OPR -->
+      <div class="db" style="padding-bottom:0; gap:7px">
+        <div class="chips">
+          <div class="chip"><div class="chip-l">Tarikh Program</div><div class="chip-v ph" id="kol-d-trkh">-</div></div>
+          <div class="chip"><div class="chip-l">Tempat / Lokasi</div><div class="chip-v ph" id="kol-d-lok">-</div></div>
+          <div class="chip"><div class="chip-l">Peringkat</div><div class="chip-v" id="kol-d-per">INSTITUSI</div></div>
+          <div class="chip" id="kol-chip-pes"><div class="chip-l">Bil. Peserta</div><div class="chip-v ph" id="kol-d-pes">-</div></div>
+          <div class="chip"><div class="chip-l">Peranan</div><div class="chip-v ph" id="kol-d-prn">-</div></div>
+        </div>
+        <div class="anj">
+          <span class="anj-l">Anjuran:</span>
+          <span class="anj-v ph" id="kol-d-anj">-</span>
+        </div>
+        <!-- image grid — flex:1 fills remaining space -->
+        <div class="kol-empty" id="kol-empty-ph">
+          <div class="kol-ph-icon">🖼</div>
+          <div>Muat naik gambar untuk menjana kolaj</div>
+        </div>
+        <div class="kol-grid" id="kol-img-grid" style="display:none"></div>
+      </div>
+
+      <!-- Footer — mirrors OPR -->
+      <div class="dft">
+        <div class="dft-b"><span>CemerlangGo</span> · Kolaj Gambar</div>
+        <div class="dft-p">1 / 1</div>
+      </div>
+
+    </div>
+  </div>
+
+  <div id="pvw" style="transform:scale(0.7)">
+    <div id="doc">
+
+      <!-- Header card -->
+      <div class="dh">
+        <div class="dh-top">
+          <div>
+            <div class="dh-brand">CemerlangGo</div>
+            <div class="dh-sub">Dokumentasi Guru Kini Lebih Sistematik.</div>
+          </div>
+          <div class="dh-badge">One Page Report</div>
+        </div>
+        <div class="dh-title ph" id="d-nama">Sila Masukkan Nama Program</div>
+      </div>
+
+      <!-- Body -->
+      <div class="db">
+
+        <!-- Info Chips -->
+        <div class="chips">
+          <div class="chip"><div class="chip-l">Tarikh Program</div><div class="chip-v" id="d-trkh"><script>(function(){var d=new Date(),H=['AHAD','ISNIN','SELASA','RABU','KHAMIS','JUMAAT','SABTU'];document.getElementById('d-trkh').textContent=('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+'/'+d.getFullYear()+' ('+H[d.getDay()]+')';})();</script></div></div>
+          <div class="chip"><div class="chip-l">Tempat / Lokasi</div><div class="chip-v ph" id="d-lok">-</div></div>
+          <div class="chip"><div class="chip-l">Peringkat</div><div class="chip-v" id="d-per">INSTITUSI</div></div>
+          <div class="chip" id="chip-pes"><div class="chip-l">Bil. Peserta</div><div class="chip-v ph" id="d-pes">-</div></div>
+          <div class="chip"><div class="chip-l">Peranan</div><div class="chip-v ph" id="d-prn">-</div></div>
+        </div>
+
+        <!-- Anjuran -->
+        <div class="anj">
+          <span class="anj-l">Anjuran:</span>
+          <span class="anj-v ph" id="d-anj">-</span>
+        </div>
+
+        <!-- Content sections — smart renumbered -->
+        <div class="csec" id="sec-obj">
+          <div class="ch"><span class="cnum" id="num-obj">01</span><span class="clbl">Objektif Program</span></div>
+          <div class="cbody ph" id="d-obj">Sila masukkan objektif program...</div>
+        </div>
+
+        <div class="csec" id="sec-ring">
+          <div class="ch"><span class="cnum" id="num-ring">02</span><span class="clbl">Ringkasan Pelaksanaan</span></div>
+          <div class="cbody ph" id="d-ring">Sila masukkan ringkasan pelaksanaan...</div>
+        </div>
+
+        <div class="csec" id="sec-imp">
+          <div class="ch"><span class="cnum" id="num-imp">03</span><span class="clbl">Impak / Refleksi</span></div>
+          <div class="cbody ph" id="d-imp">Sila masukkan impak dan refleksi...</div>
+        </div>
+
+        <!-- Photos -->
+        <div class="psec" id="sec-gam">
+          <div class="phd"><span class="phd-l">Lampiran Visual</span><div class="phd-ln"></div></div>
+          <div class="pgrid c2" id="d-pgrid">
+            <div class="ps"><div class="ph-t">GAMBAR 1</div></div>
+            <div class="ps"><div class="ph-t">GAMBAR 2</div></div>
+          </div>
+        </div>
+
+        <div class="dsp"></div>
+
+        <!-- Signature — single -->
+        <div class="sig-sec" id="sec-sig">
+          <div class="sig-role">Disediakan Oleh</div>
+          <div class="sig-name ph" id="d-pn">Nama Penyedia Laporan</div>
+          <div class="sig-pos ph" id="d-pj">Jawatan</div>
+          <div class="sig-date ph" id="d-inst">Nama Institusi</div>
+        </div>
+
+      </div>
+
+      <!-- Footer -->
+      <div class="dft">
+        <div class="dft-b"><span>CemerlangGo</span> · One Page Report</div>
+        <div class="dft-p">1 / 1</div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+const imgs = {};
+let imgN = 2, zl = 0.70;
+
+const HARI = ['AHAD','ISNIN','SELASA','RABU','KHAMIS','JUMAAT','SABTU'];
+
+// ── Value helpers ──
+function fmt(s) {
+  if (!s) return null;
+  const [y,m,d] = s.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  const hari = HARI[date.getDay()];
+  return `${String(d).padStart(2,'0')}/${String(m).padStart(2,'0')}/${y} (${hari})`;
+}
+function sv(id, val, ph) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (val) { el.textContent = val; el.classList.remove('ph'); }
+  else { el.textContent = ph; el.classList.add('ph'); }
+}
+
+// ── Main update ──
+function upd() {
+  const nama = document.getElementById('f-nama').value.trim();
+  const mula = document.getElementById('f-mula').value;
+  const tmt  = document.getElementById('f-tamat').value;
+  const lok  = document.getElementById('f-lok').value.trim();
+  const per  = document.getElementById('f-per').value;
+  const pes  = document.getElementById('f-pes').value.trim();
+  const prn  = document.getElementById('f-prn').value.trim();
+  const anj  = document.getElementById('f-anj').value.trim();
+  const obj  = document.getElementById('f-obj').value.trim();
+  const ring = document.getElementById('f-ring').value.trim();
+  const imp  = document.getElementById('f-imp').value.trim();
+  const pn   = document.getElementById('f-pn').value.trim();
+  const pj   = document.getElementById('f-pj').value.trim();
+  const inst = document.getElementById('f-inst').value.trim();
+
+  const dNama = document.getElementById('d-nama');
+  if (nama) { dNama.textContent = nama; dNama.classList.remove('ph'); }
+  else      { dNama.textContent = 'Sila Masukkan Nama Program'; dNama.classList.add('ph'); }
+
+  let tarikh = '';
+  if (mula && tmt && mula !== tmt) tarikh = `${fmt(mula)} – ${fmt(tmt)}`;
+  else if (mula) tarikh = fmt(mula);
+  else if (tmt)  tarikh = fmt(tmt);
+  sv('d-trkh', tarikh, '-');
+  sv('d-lok',  lok, '-');
+  sv('d-per',  per, 'INSTITUSI');
+  sv('d-pes',  pes ? `${pes} orang` : null, '-');
+  sv('d-prn',  prn, '-');
+  sv('d-anj',  anj, '-');
+  sv('d-obj',  obj,  'Sila masukkan objektif program...');
+  sv('d-ring', ring, 'Sila masukkan ringkasan pelaksanaan...');
+  sv('d-imp',  imp,  'Sila masukkan impak dan refleksi...');
+  sv('d-pn',   pn,   'Nama Penyedia Laporan');
+  sv('d-pj',   pj,   'Jawatan');
+  sv('d-inst', inst, 'Nama Institusi');
+}
+
+// ── Smart renumber 01/02/03 based on visible sections ──
+function renumber() {
+  const order = [
+    { tog: 'tog-obj',  num: 'num-obj' },
+    { tog: 'tog-ring', num: 'num-ring' },
+    { tog: 'tog-imp',  num: 'num-imp' },
+  ];
+  let n = 1;
+  order.forEach(s => {
+    if (document.getElementById(s.tog).checked) {
+      document.getElementById(s.num).textContent = String(n++).padStart(2, '0');
+    }
+  });
+}
+
+// ── Content section toggles ──
+function refreshCols() {
+  const objOn  = document.getElementById('tog-obj').checked;
+  const ringOn = document.getElementById('tog-ring').checked;
+  const impOn  = document.getElementById('tog-imp').checked;
+  document.getElementById('sec-obj').classList.toggle('dn', !objOn);
+  document.getElementById('sec-ring').classList.toggle('dn', !ringOn);
+  document.getElementById('sec-imp').classList.toggle('dn', !impOn);
+  document.getElementById('obj-f').style.display  = objOn  ? '' : 'none';
+  document.getElementById('ring-f').style.display = ringOn ? '' : 'none';
+  document.getElementById('imp-f').style.display  = impOn  ? '' : 'none';
+  renumber();
+}
+
+// ── Bil. Peserta toggle ──
+function togPes() {
+  const on = document.getElementById('tog-pes').checked;
+  document.getElementById('chip-pes').classList.toggle('dn', !on);
+  document.getElementById('pes-inp').style.display = on ? '' : 'none';
+}
+
+// ── Simple section toggle ──
+function togSec(k) {
+  const on = document.getElementById(`tog-${k}`).checked;
+  document.getElementById(`sec-${k}`).classList.toggle('dn', !on);
+  document.getElementById(`${k}-f`).style.display = on ? '' : 'none';
+}
+
+// ── Image slots ──
+function updateSlots() {
+  imgN = parseInt(document.getElementById('f-imgn').value);
+  Object.keys(imgs).forEach(k => { if (+k >= imgN) delete imgs[k]; });
+  buildIG(); renderDP();
+}
+
+function buildIG() {
+  const g = document.getElementById('ig'); g.innerHTML = '';
+  for (let i = 0; i < imgN; i++) {
+    const s = document.createElement('div');
+    s.className = 'is'; s.id = `is${i}`;
+    s.innerHTML = `<input type="file" accept="image/*,.heic,.heif" onchange="loadI(event,${i})">
+      <div class="pl">+</div><div class="sl">GAMBAR ${i+1}</div>
+      <button class="rm" onclick="rmI(event,${i})">✕</button>`;
+    if (imgs[i]) {
+      const th = document.createElement('img'); th.className = 'th'; th.src = imgs[i];
+      s.appendChild(th);
+      s.querySelector('.pl').style.display = 'none';
+      s.querySelector('.sl').style.display = 'none';
+    }
+    g.appendChild(s);
+  }
+}
+
+function renderDP() {
+  const g = document.getElementById('d-pgrid');
+  g.className = `pgrid c${imgN}`;
+  g.innerHTML = '';
+  for (let i = 0; i < imgN; i++) {
+    const s = document.createElement('div'); s.className = 'ps';
+    if (imgs[i]) { const im = document.createElement('img'); im.src = imgs[i]; s.appendChild(im); }
+    else { const p = document.createElement('div'); p.className = 'ph-t'; p.textContent = `GAMBAR ${i+1}`; s.appendChild(p); }
+    g.appendChild(s);
+  }
+}
+
+// ── Crop feature ──
+let _cropSlot = -1, _cropNaturalW = 0, _cropNaturalH = 0;
+let _crX = 0, _crY = 0, _crW = 0, _crH = 0; // crop box in display px
+let _dragSX = 0, _dragSY = 0, _dragCX = 0, _dragCY = 0, _dragging = false;
+
+function loadI(e, i) {
+  const f = e.target.files[0]; if (!f) return;
+  // reset input so same file can be re-selected after crop cancel
+  e.target.value = '';
+  const r = new FileReader();
+  r.onload = ev => showCropModal(ev.target.result, i);
+  r.readAsDataURL(f);
+}
+
+function showCropModal(src, slot) {
+  _cropSlot = slot;
+  const modal = document.getElementById('crop-modal');
+  const img   = document.getElementById('crop-img');
+  img.onload = () => {
+    _cropNaturalW = img.naturalWidth;
+    _cropNaturalH = img.naturalHeight;
+    initCropBox();
+  };
+  img.src = src;
+  modal.classList.add('open');
+}
+
+function initCropBox() {
+  const img = document.getElementById('crop-img');
+  const dw  = img.offsetWidth;
+  const dh  = img.offsetHeight;
+  // Fit a 16:9 box maximally inside display image
+  let bw = dw, bh = dw * 9 / 16;
+  if (bh > dh) { bh = dh; bw = dh * 16 / 9; }
+  _crW = bw; _crH = bh;
+  _crX = (dw - bw) / 2;
+  _crY = (dh - bh) / 2;
+  positionCropRegion();
+}
+
+function positionCropRegion() {
+  const img = document.getElementById('crop-img');
+  const dw  = img.offsetWidth;
+  const dh  = img.offsetHeight;
+  // clamp
+  _crX = Math.max(0, Math.min(_crX, dw - _crW));
+  _crY = Math.max(0, Math.min(_crY, dh - _crH));
+  const r = document.getElementById('crop-region');
+  r.style.left   = _crX + 'px';
+  r.style.top    = _crY + 'px';
+  r.style.width  = _crW + 'px';
+  r.style.height = _crH + 'px';
+}
+
+function closeCropModal() {
+  document.getElementById('crop-modal').classList.remove('open');
+  _cropSlot = -1;
+}
+
+function applyCrop() {
+  const img  = document.getElementById('crop-img');
+  const dw   = img.offsetWidth;
+  const dh   = img.offsetHeight;
+  const scX  = _cropNaturalW / dw;
+  const scY  = _cropNaturalH / dh;
+  const sx   = Math.round(_crX * scX);
+  const sy   = Math.round(_crY * scY);
+  const sw   = Math.round(_crW * scX);
+  const sh   = Math.round(_crH * scY);
+  const canvas = document.createElement('canvas');
+  canvas.width  = 1280; canvas.height = 720;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, sx, sy, sw, sh, 0, 0, 1280, 720);
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+  const slot = _cropSlot;
+  closeCropModal();
+  imgs[slot] = dataUrl;
+  const s  = document.getElementById(`is${slot}`);
+  let th = s.querySelector('img.th');
+  if (!th) { th = document.createElement('img'); th.className = 'th'; s.appendChild(th); }
+  th.src = dataUrl;
+  s.querySelector('.pl').style.display = 'none';
+  s.querySelector('.sl').style.display = 'none';
+  renderDP();
+}
+
+// drag handlers
+(function() {
+  const getXY = ev => ev.touches ? { x: ev.touches[0].clientX, y: ev.touches[0].clientY } : { x: ev.clientX, y: ev.clientY };
+  function startDrag(ev) {
+    if (!document.getElementById('crop-modal').classList.contains('open')) return;
+    ev.preventDefault();
+    const p = getXY(ev);
+    _dragging = true; _dragSX = p.x; _dragSY = p.y; _dragCX = _crX; _dragCY = _crY;
+  }
+  function moveDrag(ev) {
+    if (!_dragging) return;
+    ev.preventDefault();
+    const p = getXY(ev);
+    _crX = _dragCX + (p.x - _dragSX);
+    _crY = _dragCY + (p.y - _dragSY);
+    positionCropRegion();
+  }
+  function endDrag() { _dragging = false; }
+  document.addEventListener('DOMContentLoaded', () => {
+    const r = document.getElementById('crop-region');
+    r.addEventListener('mousedown', startDrag);
+    r.addEventListener('touchstart', startDrag, { passive: false });
+    document.addEventListener('mousemove', moveDrag);
+    document.addEventListener('touchmove', moveDrag, { passive: false });
+    document.addEventListener('mouseup', endDrag);
+    document.addEventListener('touchend', endDrag);
+  });
+})();
+
+function rmI(e, i) {
+  e.stopPropagation(); e.preventDefault();
+  delete imgs[i];
+  const s = document.getElementById(`is${i}`);
+  s.querySelector('input').value = '';
+  const th = s.querySelector('img.th'); if (th) th.remove();
+  s.querySelector('.pl').style.display = '';
+  s.querySelector('.sl').style.display = '';
+  renderDP();
+}
+
+// ── Zoom ──
+function zoom(d) {
+  zl = Math.max(0.35, Math.min(1.4, zl + d));
+  document.getElementById('pvw').style.transform     = `scale(${zl})`;
+  document.getElementById('kol-pvw').style.transform = `scale(${zl})`;
+  document.getElementById('zlbl').textContent = `${Math.round(zl*100)}%`;
+}
+
+// ── Sidebar toggle ──
+function toggleSidebar() {
+  document.body.classList.toggle('sb-hidden');
+}
+
+// ── Auto-fit zoom for small screens ──
+function autoFitZoom() {
+  const pvEl = document.getElementById('pv');
+  const avail = pvEl.clientWidth - 40; // minus padding
+  const fit = Math.max(0.3, Math.min(0.85, avail / 794));
+  if (fit < zl) {
+    zl = Math.round(fit * 20) / 20; // snap to nearest 0.05
+    document.getElementById('pvw').style.transform     = `scale(${zl})`;
+    document.getElementById('kol-pvw').style.transform = `scale(${zl})`;
+    document.getElementById('zlbl').textContent = `${Math.round(zl*100)}%`;
+  }
+}
+
+function toggleUploadGrid() {
+  const grid = document.getElementById('ig');
+  const btn  = document.getElementById('btn-show-grid');
+  const show = grid.style.display === 'none';
+  grid.style.display = show ? '' : 'none';
+  btn.textContent = show ? '− SEMBUNYIKAN' : '+ MUAT NAIK';
+}
+
+// ── Mobile detection ──
+const _isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+// ── Export OPR PDF ──
+async function expPDF() {
+  const btn = document.getElementById('btn-exp');
+  btn.textContent = 'Menjana...'; btn.disabled = true;
+  const nama = document.getElementById('f-nama').value.trim() || 'OPR';
+  const filename = `CemerlangGo_OPR_${nama.replace(/\s+/g,'_')}.pdf`;
+
+  if (_isMobile) {
+    // Mobile: open blank tab BEFORE await (iOS popup blocker bypass)
+    const mWin = window.open('', '_blank');
+    try {
+      const opt = {
+        margin: 0, filename,
+        image: { type: 'jpeg', quality: 0.97 },
+        html2canvas: { scale: 2, useCORS: true, allowTaint: true, width: 794, height: 1122, windowWidth: 794, windowHeight: 1122, scrollX: 0, scrollY: 0 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+      const blob = await html2pdf().set(opt).from(document.getElementById('doc')).output('blob');
+      const url = URL.createObjectURL(blob);
+      if (mWin && !mWin.closed) mWin.location.href = url;
+      else {
+        const a = document.createElement('a'); a.href = url; a.download = filename;
+        document.body.appendChild(a); a.click();
+        setTimeout(() => { a.remove(); URL.revokeObjectURL(url); }, 3000);
+      }
+      setTimeout(() => URL.revokeObjectURL(url), 15000);
+    } catch(e) { if (mWin) mWin.close(); alert('Gagal menjana PDF. Cuba semula.'); }
+
+  } else {
+    // Desktop — EXACT original code, unchanged
+    const opt = {
+      margin: 0,
+      filename,
+      image: { type: 'jpeg', quality: 0.97 },
+      html2canvas: { scale: 2, useCORS: true, allowTaint: true, width: 794, height: 1122 },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+    try { await html2pdf().set(opt).from(document.getElementById('doc')).save(); }
+    catch(e) { alert('Gagal menjana PDF. Cuba semula.'); }
+  }
+
+  btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Simpan PDF (A4)`;
+  btn.disabled = false;
+}
+
+// ── Auto uppercase (excludes content fields 01/02/03) ──
+const NO_UPPER = new Set(['f-obj', 'f-ring', 'f-imp']);
+document.addEventListener('input', e => {
+  const t = e.target;
+  if (NO_UPPER.has(t.id)) return;
+  if (t.tagName !== 'TEXTAREA' && !(t.tagName === 'INPUT' && t.type === 'text')) return;
+  // Use rAF so the browser commits the character before we convert
+  requestAnimationFrame(() => {
+    const pos = t.selectionStart;
+    t.value = t.value.toUpperCase();
+    try { t.setSelectionRange(pos, pos); } catch(_) {}
+    upd();
+    if (t.closest('#kol-fs')) buildCollage();
+  });
+});
+// On blur: uppercase without setSelectionRange (avoids refocus trap)
+document.addEventListener('blur', e => {
+  const t = e.target;
+  if (NO_UPPER.has(t.id)) return;
+  if (t.tagName !== 'TEXTAREA' && !(t.tagName === 'INPUT' && t.type === 'text')) return;
+  t.value = t.value.toUpperCase();
+  upd();
+  if (t.closest('#kol-fs')) buildCollage();
+}, true);
+
+// ── KOLAJ GAMBAR ──
+let kolajImgs = [];
+let kolRowFlexes = []; // persists row heights across field-only rebuilds
+
+// Pack images into rows based on aspect ratios — portrait stays portrait, landscape stays landscape
+function packKolRows(imgs) {
+  const n = imgs.length;
+  if (n === 0) return [];
+  if (n === 1) return [[imgs[0]]];
+
+  // Target number of rows
+  const numRows = n <= 4 ? 2 : n <= 9 ? 3 : 4;
+  const totalAR  = imgs.reduce((s, im) => s + im.aspect, 0);
+  const targetAR = totalAR / numRows; // target aspect-ratio sum per row
+
+  const rows = [[]];
+  let rowAR = 0;
+
+  imgs.forEach((img, i) => {
+    rows[rows.length - 1].push(img);
+    rowAR += img.aspect;
+    const remaining  = n - i - 1;
+    const rowsUsed   = rows.length;
+    // Start a new row when this row is "full enough" and more rows are needed
+    if (rowAR >= targetAR * 0.75 && remaining > 0 && rowsUsed < numRows) {
+      rows.push([]);
+      rowAR = 0;
+    }
+  });
+
+  // Remove trailing empty row if any
+  if (rows[rows.length - 1].length === 0) rows.pop();
+  return rows;
+}
+
+function switchMode(mode) {
+  const opr = mode === 'opr';
+  document.getElementById('fs').style.display         = opr ? 'block' : 'none';
+  document.getElementById('sb-ft').style.display      = opr ? 'block' : 'none';
+  document.getElementById('kol-fs').style.display     = opr ? 'none' : 'block';
+  document.getElementById('kol-sb-ft').style.display  = opr ? 'none' : 'block';
+  document.getElementById('pvw').style.display        = opr ? 'block' : 'none';
+  document.getElementById('kol-pvw').style.display    = opr ? 'none' : 'block';
+  document.getElementById('pv-bar').style.display     = 'flex';
+  document.getElementById('tab-opr').classList.toggle('active', opr);
+  document.getElementById('tab-kolaj').classList.toggle('active', !opr);
+}
+
+function handleKolajFiles(e) {
+  const files = Array.from(e.target.files);
+  const slots = 12 - kolajImgs.length;
+  files.slice(0, slots).forEach(f => {
+    const r = new FileReader();
+    r.onload = ev => {
+      const src = ev.target.result;
+      const tmp = new Image();
+      tmp.onload = () => {
+        kolajImgs.push({ src, aspect: tmp.naturalWidth / tmp.naturalHeight, size: 1, pos: { x: 50, y: 50 } });
+        buildCollage(); renderKolThumbs();
+      };
+      tmp.src = src;
+    };
+    r.readAsDataURL(f);
+  });
+  e.target.value = '';
+}
+
+function removeKolImg(i) {
+  kolajImgs.splice(i, 1);
+  renderKolThumbs();
+  buildCollage();
+}
+
+let _kolDragIdx = -1;
+let _kolTouchSrc = null, _kolTouchSrcIdx = -1;
+
+function renderKolThumbs() {
+  const c = document.getElementById('kol-thumbs');
+  c.innerHTML = '';
+  kolajImgs.forEach((src, i) => {
+    const d = document.createElement('div');
+    d.className = 'kol-th';
+    d.draggable = true;
+    d.dataset.idx = i;
+    d.innerHTML = `<img src="${kolajImgs[i].src}" draggable="false">
+      <div class="kol-th-num">${i + 1}</div>
+      <button onclick="removeKolImg(${i})">✕</button>`;
+
+    // ── Mouse drag ──
+    d.addEventListener('dragstart', e => {
+      _kolDragIdx = i;
+      d.classList.add('kol-dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    d.addEventListener('dragover', e => {
+      e.preventDefault();
+      document.querySelectorAll('.kol-th').forEach(el => el.classList.remove('kol-over'));
+      if (i !== _kolDragIdx) d.classList.add('kol-over');
+    });
+    d.addEventListener('dragleave', () => d.classList.remove('kol-over'));
+    d.addEventListener('drop', e => {
+      e.preventDefault();
+      if (_kolDragIdx !== -1 && _kolDragIdx !== i) {
+        const moved = kolajImgs.splice(_kolDragIdx, 1)[0];
+        kolajImgs.splice(i, 0, moved);
+        renderKolThumbs(); buildCollage();
+      }
+    });
+    d.addEventListener('dragend', () => {
+      document.querySelectorAll('.kol-th').forEach(el => el.classList.remove('kol-dragging', 'kol-over'));
+      _kolDragIdx = -1;
+    });
+
+    // ── Touch drag ──
+    d.addEventListener('touchstart', e => {
+      _kolTouchSrc = d; _kolTouchSrcIdx = i;
+      d.classList.add('kol-dragging');
+    }, { passive: true });
+    d.addEventListener('touchmove', e => {
+      e.preventDefault();
+      const t = e.touches[0];
+      const el = document.elementFromPoint(t.clientX, t.clientY);
+      const target = el && el.closest('.kol-th');
+      document.querySelectorAll('.kol-th').forEach(el => el.classList.remove('kol-over'));
+      if (target && target !== _kolTouchSrc) target.classList.add('kol-over');
+    }, { passive: false });
+    d.addEventListener('touchend', e => {
+      const t = e.changedTouches[0];
+      const el = document.elementFromPoint(t.clientX, t.clientY);
+      const target = el && el.closest('.kol-th');
+      document.querySelectorAll('.kol-th').forEach(el => el.classList.remove('kol-dragging', 'kol-over'));
+      if (target && target !== _kolTouchSrc) {
+        const toIdx = parseInt(target.dataset.idx);
+        if (!isNaN(toIdx) && toIdx !== _kolTouchSrcIdx) {
+          const moved = kolajImgs.splice(_kolTouchSrcIdx, 1)[0];
+          kolajImgs.splice(toIdx, 0, moved);
+          renderKolThumbs(); buildCollage();
+        }
+      }
+      _kolTouchSrc = null; _kolTouchSrcIdx = -1;
+    });
+
+    c.appendChild(d);
+  });
+}
+
+function kolSalinOPR() {
+  // Copy all OPR fields into kolaj fields
+  document.getElementById('kol-title').value = document.getElementById('f-nama').value;
+  document.getElementById('kol-mula').value  = document.getElementById('f-mula').value;
+  document.getElementById('kol-tamat').value = document.getElementById('f-tamat').value;
+  document.getElementById('kol-lok').value   = document.getElementById('f-lok').value;
+  document.getElementById('kol-per').value   = document.getElementById('f-per').value;
+  document.getElementById('kol-pes').value   = document.getElementById('f-pes').value;
+  document.getElementById('kol-prn').value   = document.getElementById('f-prn').value;
+  document.getElementById('kol-anj').value   = document.getElementById('f-anj').value;
+  buildCollage();
+}
+
+function setKolChip(id, val) {
+  const el = document.getElementById(id);
+  if (val) { el.textContent = val; el.classList.remove('ph'); }
+  else      { el.textContent = '-'; el.classList.add('ph'); }
+}
+
+function buildCollage() {
+  const doc   = document.getElementById('kol-doc');
+  const title = document.getElementById('kol-title').value.trim() || 'KOLAJ GAMBAR AKTIVITI';
+  const mula  = document.getElementById('kol-mula').value;
+  const tamat = document.getElementById('kol-tamat').value;
+  const lok   = document.getElementById('kol-lok').value.trim();
+  const per   = document.getElementById('kol-per').value;
+  const pes   = document.getElementById('kol-pes').value.trim();
+  const prn   = document.getElementById('kol-prn').value.trim();
+  const anj   = document.getElementById('kol-anj').value.trim();
+  const n     = kolajImgs.length;
+
+  // Date display
+  let dateStr = '';
+  if (mula && tamat && mula !== tamat) dateStr = fmt(mula) + ' – ' + fmt(tamat);
+  else if (mula) dateStr = fmt(mula);
+
+  // title chip
+  const titleEl = document.getElementById('kol-d-title');
+  if (title && title !== 'KOLAJ GAMBAR AKTIVITI') {
+    titleEl.textContent = title; titleEl.classList.remove('ph');
+  } else {
+    titleEl.textContent = 'Sila Masukkan Nama Program'; titleEl.classList.add('ph');
+  }
+  setKolChip('kol-d-trkh', dateStr);
+  setKolChip('kol-d-lok',  lok);
+  document.getElementById('kol-d-per').textContent = per;
+  const pesOn = document.getElementById('kol-tog-pes').checked;
+  document.getElementById('kol-chip-pes').classList.toggle('dn', !pesOn);
+  document.getElementById('kol-pes-inp').style.display = pesOn ? '' : 'none';
+  setKolChip('kol-d-pes',  pesOn && pes ? pes + ' orang' : '');
+  setKolChip('kol-d-prn',  prn);
+  setKolChip('kol-d-anj',  anj);
+
+  // toggle placeholder vs grid
+  const emptyPh = document.getElementById('kol-empty-ph');
+  const imgGrid = document.getElementById('kol-img-grid');
+  if (n === 0) {
+    emptyPh.style.display = '';
+    imgGrid.style.display = 'none';
+    imgGrid.innerHTML = '';
+    return;
+  }
+  emptyPh.style.display = 'none';
+  imgGrid.style.display = '';
+  imgGrid.innerHTML = '';
+
+  const rows = packKolRows(kolajImgs);
+  // reset row heights only when row count changes (preserve across field-only updates)
+  if (kolRowFlexes.length !== rows.length) kolRowFlexes = rows.map(() => 1);
+
+  rows.forEach((row, rowIdx) => {
+    const rowDiv = document.createElement('div');
+    rowDiv.className = 'kol-row';
+    rowDiv.style.flex = kolRowFlexes[rowIdx] || 1;
+
+    row.forEach(im => {
+      const idx = kolajImgs.indexOf(im);
+      const cell = document.createElement('div');
+      cell.className = 'kol-cell';
+      cell.style.flex = im.aspect * (im.size || 1);
+      cell.dataset.imgIdx = idx;
+      const img = document.createElement('img');
+      img.src = im.src;
+      const p = im.pos || { x: 50, y: 50 };
+      img.style.objectPosition = `${p.x}% ${p.y}%`;
+      cell.appendChild(img);
+
+      // top-left drag handle — reorder images
+      const dh = document.createElement('div');
+      dh.className = 'kol-dh';
+      dh.addEventListener('mousedown',  e => startPvDrag(e, idx, cell));
+      dh.addEventListener('touchstart', e => startPvDrag(e, idx, cell), { passive: false });
+      cell.appendChild(dh);
+
+      // right-edge resize handle
+      const rh = document.createElement('div');
+      rh.className = 'kol-rh';
+      rh.addEventListener('mousedown',  e => startKolResize(e, cell, im, idx, rowDiv));
+      rh.addEventListener('touchstart', e => startKolResize(e, cell, im, idx, rowDiv), { passive: false });
+      cell.appendChild(rh);
+
+      // double-click cell → pan mode
+      cell.addEventListener('dblclick', e => { e.stopPropagation(); enterKolPan(cell, img, im); });
+      rowDiv.appendChild(cell);
+    });
+
+    // bottom-edge row-height resize handle
+    const bh = document.createElement('div');
+    bh.className = 'kol-row-bh';
+    bh.addEventListener('mousedown',  e => startKolRowResize(e, rowDiv, rowIdx));
+    bh.addEventListener('touchstart', e => startKolRowResize(e, rowDiv, rowIdx), { passive: false });
+    rowDiv.appendChild(bh);
+
+    imgGrid.appendChild(rowDiv);
+  });
+}
+
+let _pvTarget = null;
+function startPvDrag(e, idx, cell) {
+  e.preventDefault(); e.stopPropagation();
+  cell.classList.add('kol-pv-dragging');
+  _pvTarget = null;
+
+  function onMove(ev) {
+    ev.preventDefault();
+    const t = ev.touches ? ev.touches[0] : ev;
+    const el = document.elementFromPoint(t.clientX, t.clientY);
+    const over = el && el.closest('#kol-img-grid .kol-cell');
+    document.querySelectorAll('#kol-img-grid .kol-cell').forEach(c => c.classList.remove('kol-pv-over'));
+    if (over && over !== cell) { over.classList.add('kol-pv-over'); _pvTarget = over; }
+    else _pvTarget = null;
+  }
+  function onEnd() {
+    cell.classList.remove('kol-pv-dragging');
+    document.querySelectorAll('#kol-img-grid .kol-cell').forEach(c => c.classList.remove('kol-pv-over'));
+    if (_pvTarget) {
+      const toIdx = parseInt(_pvTarget.dataset.imgIdx);
+      if (!isNaN(toIdx) && toIdx !== idx) {
+        const moved = kolajImgs.splice(idx, 1)[0];
+        kolajImgs.splice(toIdx, 0, moved);
+        kolRowFlexes = []; // reset row heights after reorder
+        buildCollage(); renderKolThumbs();
+      }
+    }
+    _pvTarget = null;
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup',   onEnd);
+    document.removeEventListener('touchmove', onMove);
+    document.removeEventListener('touchend',  onEnd);
+  }
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup',   onEnd);
+  document.addEventListener('touchmove', onMove, { passive: false });
+  document.addEventListener('touchend',  onEnd);
+}
+
+function startKolResize(e, cell, im, idx, rowDiv) {
+  e.preventDefault(); e.stopPropagation();
+  const isTouch = e.touches;
+  const startX     = isTouch ? e.touches[0].clientX : e.clientX;
+  const startFlex  = parseFloat(cell.style.flex) || im.aspect;
+  const startW     = cell.offsetWidth;
+  const rowW       = rowDiv.offsetWidth;
+  const flexSum    = Array.from(rowDiv.children)
+                       .reduce((s, c) => s + (parseFloat(c.style.flex) || 1), 0);
+  // kol-pvw is scaled — read it so drag distance maps to visual pixels
+  const scaleMatch = document.getElementById('kol-pvw').style.transform.match(/scale\(([\d.]+)\)/);
+  const scale      = scaleMatch ? parseFloat(scaleMatch[1]) : 0.7;
+
+  cell.classList.add('kol-resizing');
+
+  function onMove(ev) {
+    ev.preventDefault();
+    const cx       = ev.touches ? ev.touches[0].clientX : ev.clientX;
+    const deltaCSS = (cx - startX) / scale;
+    const newW     = Math.max(30, startW + deltaCSS);
+    const newFlex  = (newW / rowW) * flexSum;
+    cell.style.flex = Math.max(0.15, newFlex);
+  }
+  function onEnd() {
+    cell.classList.remove('kol-resizing');
+    im.size = parseFloat(cell.style.flex) / im.aspect;
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup',   onEnd);
+    document.removeEventListener('touchmove', onMove);
+    document.removeEventListener('touchend',  onEnd);
+  }
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup',   onEnd);
+  document.addEventListener('touchmove', onMove, { passive: false });
+  document.addEventListener('touchend',  onEnd);
+}
+
+function startKolRowResize(e, rowEl, rowIdx) {
+  e.preventDefault(); e.stopPropagation();
+  const isTouch  = e.touches;
+  const startY   = isTouch ? e.touches[0].clientY : e.clientY;
+  const startH   = rowEl.offsetHeight;
+  const gridH    = rowEl.parentElement.offsetHeight;
+  const flexSum  = Array.from(rowEl.parentElement.children)
+                     .reduce((s, c) => s + (parseFloat(c.style.flex) || 1), 0);
+  const scaleM   = document.getElementById('kol-pvw').style.transform.match(/scale\(([\d.]+)\)/);
+  const scale    = scaleM ? parseFloat(scaleM[1]) : 0.7;
+  rowEl.classList.add('kol-row-resizing');
+
+  function onMove(ev) {
+    ev.preventDefault();
+    const cy      = ev.touches ? ev.touches[0].clientY : ev.clientY;
+    const newH    = Math.max(40, startH + (cy - startY) / scale);
+    const newFlex = Math.max(0.1, (newH / gridH) * flexSum);
+    rowEl.style.flex = newFlex;
+    kolRowFlexes[rowIdx] = newFlex;
+  }
+  function onEnd() {
+    rowEl.classList.remove('kol-row-resizing');
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup',   onEnd);
+    document.removeEventListener('touchmove', onMove);
+    document.removeEventListener('touchend',  onEnd);
+  }
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup',   onEnd);
+  document.addEventListener('touchmove', onMove, { passive: false });
+  document.addEventListener('touchend',  onEnd);
+}
+
+let _kolPanCell = null;
+function enterKolPan(cell, img, im) {
+  // Toggle off if same cell double-clicked again
+  if (_kolPanCell === cell) {
+    cell.classList.remove('kol-pan-mode');
+    _kolPanCell = null;
+    return;
+  }
+  // Exit previous pan session
+  if (_kolPanCell) _kolPanCell.classList.remove('kol-pan-mode');
+  _kolPanCell = cell;
+  cell.classList.add('kol-pan-mode');
+
+  const scaleM = document.getElementById('kol-pvw').style.transform.match(/scale\(([\d.]+)\)/);
+  const scale  = scaleM ? parseFloat(scaleM[1]) : 0.7;
+
+  function onDown(e) {
+    // ignore clicks on resize handles
+    if (e.target.closest('.kol-rh, .kol-row-bh')) return;
+    e.preventDefault(); e.stopPropagation();
+    const startX = e.touches ? e.touches[0].clientX : e.clientX;
+    const startY = e.touches ? e.touches[0].clientY : e.clientY;
+    const p0 = { ...(im.pos || { x: 50, y: 50 }) };
+    cell.classList.add('kol-panning');
+
+    function onMove(ev) {
+      ev.preventDefault();
+      const cx = ev.touches ? ev.touches[0].clientX : ev.clientX;
+      const cy = ev.touches ? ev.touches[0].clientY : ev.clientY;
+      const nx = Math.max(0, Math.min(100, p0.x - (cx - startX) / scale * 0.2));
+      const ny = Math.max(0, Math.min(100, p0.y - (cy - startY) / scale * 0.2));
+      im.pos = { x: nx, y: ny };
+      img.style.objectPosition = `${nx}% ${ny}%`;
+    }
+    function onUp() {
+      cell.classList.remove('kol-panning');
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup',   onUp);
+      document.removeEventListener('touchmove', onMove);
+      document.removeEventListener('touchend',  onUp);
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup',   onUp);
+    document.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('touchend',  onUp);
+  }
+
+  cell.addEventListener('mousedown',  onDown);
+  cell.addEventListener('touchstart', onDown, { passive: false });
+
+  function onDocClick(ev) {
+    if (!ev.target.closest('#kol-img-grid')) {
+      cell.classList.remove('kol-pan-mode');
+      cell.removeEventListener('mousedown',  onDown);
+      cell.removeEventListener('touchstart', onDown);
+      document.removeEventListener('click', onDocClick);
+      _kolPanCell = null;
+    }
+  }
+  setTimeout(() => document.addEventListener('click', onDocClick), 50);
+}
+
+async function expCollagePDF() {
+  const btn = document.getElementById('btn-kol-exp');
+  btn.textContent = 'Menjana...'; btn.disabled = true;
+
+  // Pre-bake: html2canvas ignores object-fit/object-position, so manually crop each image
+  const snapshots = [];
+  for (const cell of document.querySelectorAll('#kol-img-grid .kol-cell')) {
+    const img = cell.querySelector('img');
+    if (!img || !img.naturalWidth) continue;
+    const cw = cell.offsetWidth, ch = cell.offsetHeight;
+    if (!cw || !ch) continue;
+    const iw = img.naturalWidth, ih = img.naturalHeight;
+    const cellAR = cw / ch, imgAR = iw / ih;
+    const op = (img.style.objectPosition || '50% 50%').trim().split(/\s+/);
+    const px = parseFloat(op[0]) / 100;
+    const py = parseFloat(op[1] !== undefined ? op[1] : op[0]) / 100;
+    let sx, sy, sw, sh;
+    if (imgAR > cellAR) { sh = ih; sw = ih * cellAR; sx = (iw - sw) * px; sy = 0; }
+    else                { sw = iw; sh = iw / cellAR; sx = 0; sy = (ih - sh) * py; }
+    const cv = document.createElement('canvas');
+    cv.width = cw * 2; cv.height = ch * 2;
+    cv.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, cv.width, cv.height);
+    snapshots.push({ img, origSrc: img.src, origStyle: img.getAttribute('style') || '' });
+    img.src = cv.toDataURL('image/jpeg', 0.95);
+    img.style.cssText = 'width:100%;height:100%;display:block;object-fit:fill;';
+  }
+
+  const title = document.getElementById('kol-title').value.trim() || 'Kolaj';
+  const kolFilename = `Kolaj_${title.replace(/\s+/g,'_')}.pdf`;
+
+  if (_isMobile) {
+    // Mobile: open blank tab BEFORE await (iOS popup blocker bypass)
+    const mWin = window.open('', '_blank');
+    try {
+      const opt = {
+        margin: 0, filename: kolFilename,
+        image: { type: 'jpeg', quality: 0.97 },
+        html2canvas: { scale: 2, useCORS: true, allowTaint: true, width: 794, height: 1122, windowWidth: 794, windowHeight: 1122, scrollX: 0, scrollY: 0 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+      const blob = await html2pdf().set(opt).from(document.getElementById('kol-doc')).output('blob');
+      const url = URL.createObjectURL(blob);
+      if (mWin && !mWin.closed) mWin.location.href = url;
+      else {
+        const a = document.createElement('a'); a.href = url; a.download = kolFilename;
+        document.body.appendChild(a); a.click();
+        setTimeout(() => { a.remove(); URL.revokeObjectURL(url); }, 3000);
+      }
+      setTimeout(() => URL.revokeObjectURL(url), 15000);
+    } catch(e) { if (mWin) mWin.close(); alert('Gagal jana PDF: ' + e.message); }
+
+  } else {
+    // Desktop — EXACT original code, unchanged
+    const opt = {
+      margin: 0,
+      filename: kolFilename,
+      image: { type: 'jpeg', quality: 0.97 },
+      html2canvas: { scale: 2, useCORS: true, allowTaint: true, width: 794, height: 1122 },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+    try { await html2pdf().set(opt).from(document.getElementById('kol-doc')).save(); }
+    catch(e) { alert('Gagal jana PDF: ' + e.message); }
+  }
+
+  // Restore original img states
+  snapshots.forEach(({ img, origSrc, origStyle }) => {
+    img.src = origSrc;
+    img.setAttribute('style', origStyle);
+  });
+
+  btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Simpan Kolaj PDF';
+  btn.disabled = false;
+}
+
+// ── Init ──
+(function() {
+  const d = new Date();
+  const yy = d.getFullYear();
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  const dd = String(d.getDate()).padStart(2,'0');
+  document.getElementById('f-mula').value = `${yy}-${mm}-${dd}`;
+  refreshCols();
+  buildIG(); renderDP(); upd(); renumber();
+  // Always set tarikh chip directly — bypasses browser quirks with date input readback
+  const tEl = document.getElementById('d-trkh');
+  const tStr = fmt(`${yy}-${mm}-${dd}`);
+  tEl.textContent = tStr; tEl.classList.remove('ph');
+
+  // Mobile/tablet: auto-hide sidebar and fit zoom to screen width
+  if (window.innerWidth <= 768) {
+    document.body.classList.add('sb-hidden');
+    setTimeout(autoFitZoom, 100);
+  }
+})();
+</script>
+
+<!-- About Modal -->
+<div id="about-modal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div id="about-box">
+    <div id="about-hdr">
+      <div id="about-logo">CemerlangGo</div>
+      <div id="about-tagline">Dokumentasi Guru Kini Lebih Sistematik</div>
+    </div>
+    <div id="about-body">
+
+      <div class="ab-section">
+        <div class="ab-title">Apakah CemerlangGo?</div>
+        <div class="ab-item"><div class="ab-dot"></div><span>Platform dokumentasi yang membantu guru menyediakan laporan program dan kolaj gambar secara profesional dalam masa yang singkat.</span></div>
+      </div>
+
+      <div class="ab-section">
+        <div class="ab-title">📄 One Page Report (OPR)</div>
+        <div class="ab-item"><div class="ab-dot"></div><span>Hasilkan laporan program satu halaman yang lengkap dan kemas — tanpa perlu susun atur manual.</span></div>
+        <div class="ab-item"><div class="ab-dot"></div><span>Isikan maklumat program: nama, tarikh, tempat, peringkat, bil. peserta, peranan dan anjuran.</span></div>
+        <div class="ab-item"><div class="ab-dot"></div><span>Tulis Objektif, Ringkasan Pelaksanaan dan Impak / Refleksi terus dalam borang.</span></div>
+        <div class="ab-item"><div class="ab-dot"></div><span>Lampiran Visual — muat naik sehingga 4 gambar dengan crop 16:9 secara interaktif.</span></div>
+        <div class="ab-item"><div class="ab-dot"></div><span>Pratonton langsung format A4 sebelum simpan sebagai PDF.</span></div>
+      </div>
+
+      <div class="ab-section">
+        <div class="ab-title">🖼 Kolaj Gambar</div>
+        <div class="ab-item"><div class="ab-dot"></div><span>Susun sehingga 12 gambar aktiviti dalam kolaj A4 secara automatik — susunan mengikut kreativiti.</span></div>
+        <div class="ab-item"><div class="ab-dot"></div><span>Seret gambar untuk ubah susunan, resize saiz gambar dan ketinggian baris secara manual.</span></div>
+        <div class="ab-item"><div class="ab-dot"></div><span>Double-click gambar untuk pan dan pilih bahagian yang ingin ditunjukkan.</span></div>
+        <div class="ab-item"><div class="ab-dot"></div><span>Salin maklumat program terus dari OPR dengan satu klik.</span></div>
+      </div>
+
+      <div class="ab-section">
+        <div class="ab-title">Ciri-ciri Umum</div>
+        <div class="ab-item"><div class="ab-dot"></div><span>Tiada data dihantar ke mana-mana pelayan — semua kekal dalam peranti anda.</span></div>
+        <div class="ab-item"><div class="ab-dot"></div><span>Boleh digunakan tanpa internet selepas halaman dimuatkan.</span></div>
+        <div class="ab-item"><div class="ab-dot"></div><span>Export PDF A4 terus dari browser, tiada aplikasi tambahan diperlukan.</span></div>
+      </div>
+
+      <div class="ab-section">
+        <div class="ab-title">Pencipta</div>
+        <div class="ab-item"><div class="ab-dot"></div><span>Dihasilkan oleh <strong>Hui Kar Loong</strong>, Guru Cemerlang Matematik Sekolah Rendah dengan bantuan Claude Code — untuk memudahkan urusan dokumentasi sendiri dan rakan-rakan pendidik di Malaysia.</span></div>
+        <div class="ab-item"><div class="ab-dot"></div><span>© Hui Kar Loong. Hak cipta terpelihara.</span></div>
+      </div>
+
+      <button id="about-close" onclick="document.getElementById('about-modal').classList.remove('open')">Faham, Tutup</button>
+    </div>
+  </div>
+</div>
+
+<!-- Crop Modal -->
+<div id="crop-modal">
+  <div id="crop-wrap">
+    <img id="crop-img" src="" alt="">
+    <div id="crop-region"><div class="cr-b"></div></div>
+  </div>
+  <div id="crop-btns">
+    <button id="btn-crop-cancel" onclick="closeCropModal()">Batal</button>
+    <button id="btn-crop-ok" onclick="applyCrop()">Gunakan Crop ✓</button>
+  </div>
+  <div id="crop-hint">SERET untuk alihkan kotak crop · Nisbah 16:9 dikunci</div>
+</div>
+</body>
+</html>
